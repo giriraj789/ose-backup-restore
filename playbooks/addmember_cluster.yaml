@@ -1,0 +1,48 @@
+#Adding members to ETCD Cluster
+ 
+# - hosts: master1
+#   become: yes
+#   gather_facts: no
+#   tasks:
+ 
+#   - name: ADD master2 as etcd member
+#     shell: etcdctl --cert-file /etc/etcd/peer.crt --key-file /etc/etcd/peer.key --ca-file /etc/etcd/ca.crt -C https://$(hostname):2379 member add {{ master2 }}  https://{{ master2_ip }}:2380 > /tmp/master2
+ 
+# - hosts: controller
+#   become: yes
+#   gather_facts: no
+#   tasks:
+ 
+#   - name: copy etcd.conf content from master2
+#     shell: scp {{ master1 }}:/tmp/master2 /tmp/master2
+ 
+# - hosts: master2
+#   become: yes
+#   gather_facts: no
+#   tasks:
+ 
+#   - name: COPY etcd contents
+#     copy: src=/tmp/master2  dest=/tmp/master2
+ 
+#   - name:
+#     shell: "{{ item }}"
+ 
+#     with_items:
+#      - cat /tmp/master2  >> /etc/etcd/etcd.conf
+#      - systemctl start etcd
+ 
+ - hosts: master1
+   become: yes
+   gather_facts: no
+   tasks: 
+   - name: Starting services
+     shell: systemctl start atomic-openshift-master-controllers atomic-openshift-master-api 
+
+ - hosts: master2
+   become: yes
+   gather_facts: no
+   tasks:
+   - name: Starting services
+     shell: systemctl start atomic-openshift-master-controllers atomic-openshift-master-api atomic-openshift-node
+
+

@@ -1,0 +1,22 @@
+#BACKUP OSE EMBEDDED 
+- hosts: masters
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: Backup openshift and etcd config directories
+    shell: "{{ item }}"
+    with_items:
+      - mkdir -p /testcluster_backup
+      - tar czvf /testcluster_backup/openshift-$(hostname -f).tgz /etc/origin
+      - tar czvf /testcluster_backup/etcd-config-$(hostname -f).tgz /etc/etcd
+
+#BACKUP OF ETCD DATA DIRECTORY  
+- hosts: master1
+  become: yes
+  gather_facts: no
+  tasks:
+ 
+  - name: COPY script for automates the backup process of etcd data directory
+    script: ../scripts/backup_etcd.sh
+ 

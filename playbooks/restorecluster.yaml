@@ -1,0 +1,102 @@
+#RESTORE BACKUP
+- hosts: masters
+  gather_facts: no
+  become: yes
+  tasks:
+
+  - name: COPY FACTS 
+    copy: src="{{ item }}" dest=/opt/ mode=0755 
+    with_items:
+     - ../files/restore.sh
+     - ../files/get_env.py
+
+- hosts: master1
+  gather_facts: no 
+  become: yes
+  tasks:
+
+  - name: Service stop 
+    shell: systemctl stop atomic-openshift-master-api atomic-openshift-master-controllers etcd
+    
+- hosts: master2
+  gather_facts: no
+  become: yes
+  tasks:
+
+  - name: Service stop
+    shell: systemctl stop atomic-openshift-master-api atomic-openshift-master-controllers atomic-openshift-node  etcd
+
+- hosts: masters
+  gather_facts: no
+  become: yes
+  tasks:
+
+  - name: RESTORING DATA
+    shell: "{{ item }}"
+    with_items:
+#      - systemctl stop atomic-openshift-master-api atomic-openshift-master-controllers etcd
+      - mv /etc/etcd/ /etc/etcd.old
+      - mv /var/lib/etcd/member/* /tmp/
+      - tar -C /  -xvf /cluster_backup/openshift-$HOSTNAME.tgz --wildcards --no-anchored '*etcd*'
+      - tar -C /  -xvf /cluster_backup/etcd-config-$HOSTNAME.tgz
+  
+# ETCD DATA DIR RESTORE
+- hosts: master1
+  gather_facts: no
+  become: yes
+  tasks:
+  - name: ETCD HOST UPDATE
+    shell: ./restore.sh /cluster_backup/etcd-data/hot/*.etcd
+    args:
+      chdir: /opt
+
+#Host member update
+- hosts: master1
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: ETCD HOST UPDATE
+    script: ../scripts/hostmember_update.sh
+  - name: ADD master2 as etcd member
+    shell: etcdctl --cert-file /etc/etcd/peer.crt --key-file /etc/etcd/peer.key --ca-file /etc/etcd/ca.crt -C https://$(hostname):2379 member add {{ master2 }}  https://{{ master2_ip }}:2380 > /tmp/master2
+
+- hosts: controller
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: copy etcd.conf content from master2
+    shell: scp {{ master1 }}:/tmp/master2 /tmp/master2
+
+- hosts: master2
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: COPY etcd contents
+    copy: src=/tmp/master2  dest=/tmp/master2
+
+  - name: precheck
+    script: ../scripts/precheck.sh
+
+  - name:
+    shell: "{{ item }}"
+
+    with_items:
+    - cat /tmp/master2 | egrep ^ETCD  >> /etc/etcd/etcd.conf
+    - systemctl start etcd
+
+- hosts: master1
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: Starting services
+    shell: systemctl start atomic-openshift-master-controllers atomic-openshift-master-api
+
+- hosts: master2
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: Starting services
+    shell: systemctl start atomic-openshift-master-controllers atomic-openshift-master-api atomic-openshift-node
+

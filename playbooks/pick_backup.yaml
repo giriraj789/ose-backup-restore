@@ -1,0 +1,17 @@
+#PICK BACKUP
+- hosts: masters
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: naming cluster backup
+    shell: tar cvf /$(hostname -f).testcluster_backup.tar /testcluster_backup
+- hosts: controller
+  become: yes
+  gather_facts: no
+  tasks:
+   - name: collection 
+     shell: "{{ item }}"
+     with_items: 
+       - mkdir /testbackupstore
+       - scp {{ master1 }}:/*.testcluster_backup.tar /testbackupstore
+       - scp {{ master2 }}:/*.testcluster_backup.tar /testbackupstore

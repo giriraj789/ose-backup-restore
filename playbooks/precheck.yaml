@@ -1,0 +1,7 @@
+- hosts: masters
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: precheck
+    script: ../scripts/precheck.sh
