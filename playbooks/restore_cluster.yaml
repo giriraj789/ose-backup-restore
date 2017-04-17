@@ -1,0 +1,130 @@
+#RESTORE BACKUP P
+- hosts: masters
+  gather_facts: no
+  become: yes
+  tasks:
+
+  - name: Cluster pre check
+    lineinfile:
+      dest: /etc/etcd/etcd.conf
+      regexp: '^ETCD_INITIAL_CLUSTER_STATE=new'
+      line: 'ETCD_INITIAL_CLUSTER_STATE=existing'
+
+  - name: Exporting scripts 
+    copy: src="{{ item }}" dest=/opt/ mode=0755 
+    with_items:
+     - ../files/restore.sh
+     - ../files/get_env.py
+
+- hosts: masters
+  gather_facts: no
+  become: yes
+  tasks:
+
+  - name: Stop cluster services 
+    systemd: state=stopped name=atomic-openshift-master-api atomic-openshift-master-controllers atomic-openshift-node etcd
+
+  - name: Restoring data
+    shell: "{{ item }}"
+    with_items:
+      - mv /etc/etcd/ /etc/etcd.old
+      - mv /var/lib/etcd/member/* /tmp/
+      - tar -C /  -xvf /cluster_backup/openshift-$HOSTNAME.tgz --wildcards --no-anchored '*etcd*'
+      - tar -C /  -xvf /cluster_backup/etcd-config-$HOSTNAME.tgz
+  
+# ETCD DATA DIR RESTORATION
+- hosts: master1
+  gather_facts: no
+  become: yes
+  tasks:
+  - name: ETCD HOST UPDATE
+    shell: ./restore.sh /cluster_backup/etcd-data/hot/*.etcd
+    args:
+      chdir: /opt
+
+#LOCAL HOST UPDATE 
+- hosts: master1
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: Etcd update localhost 
+    script: ../scripts/localhost_update.sh
+
+##ADD MEMBERS TO CLUSTER 
+
+#ADDING MASTER2 
+  - name: Add master2 as etcd member
+    shell: etcdctl --cert-file /etc/etcd/peer.crt --key-file /etc/etcd/peer.key --ca-file /etc/etcd/ca.crt -C https://$(hostname):2379 member add {{ master2 }}  https://{{ master2_ip }}:2380 > /tmp/master2
+
+  - name: Importing cluster contents from master2
+    fetch:
+      src: /tmp/master2
+      dest: /tmp/master2
+      flat: yes
+
+- hosts: master2
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: COPY etcd contents
+    copy: src=/tmp/master2  dest=/tmp/master2
+
+  - name: Cluster pre check
+    lineinfile:
+      dest: /etc/etcd/etcd.conf
+      regexp: '^ETCD_INITIAL_CLUSTER_STATE=new'
+      line: 'ETCD_INITIAL_CLUSTER_STATE=existing'
+  
+  - name: Master update
+    shell: cat /tmp/master2 | egrep ^ETCD  >> /etc/etcd/etcd.conf
+
+  - name: ETCD service start
+    systemd: state=started name=etcd
+
+#ADDING MASTER3
+
+- hosts: master1
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: Add master3 as etcd member
+    shell: etcdctl --cert-file /etc/etcd/peer.crt --key-file /etc/etcd/peer.key --ca-file /etc/etcd/ca.crt -C https://$(hostname):2379 member add {{ master3 }}  https://{{ master3_ip }}:2380 > /tmp/master3
+  
+  - name: Importing cluster contents from master2
+    fetch:
+      src: /tmp/master2
+      dest: /tmp/master2
+      flat: yes
+
+- hosts: master3
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: COPY etcd contents
+    copy: src=/tmp/master3  dest=/tmp/master3
+
+  - name: Cluster pre check
+    lineinfile:
+      dest: /etc/etcd/etcd.conf
+      regexp: '^ETCD_INITIAL_CLUSTER_STATE=new'
+      line: 'ETCD_INITIAL_CLUSTER_STATE=existing'
+
+  - name: Master update
+    shell: cat /tmp/master3 | egrep ^ETCD  >> /etc/etcd/etcd.conf
+
+  - name: ETCD service start
+    systemd: state=started name=etcd
+
+
+##BRINGING BACK CLUSTER SERVICES 
+- hosts: masters
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: Starting services
+    systemd: state=started name=atomic-openshift-master-api atomic-openshift-master-controllers atomic-openshift-node etcd
+
+### RESTORATION OVER 

@@ -1,0 +1,26 @@
+#PICKING BACKUP FROM MASTERS TO JUMPBOX
+- hosts: masters
+  become: yes
+  gather_facts: no
+  tasks:
+  - name: naming cluster backup
+    shell: tar cvf /$(hostname -f).cluster_backup.tar /cluster_backup
+- hosts: controller
+  become: yes
+  gather_facts: no
+  tasks:
+
+  - name: Backup directory
+    file:
+      path: /backupstore
+      state: directory
+      mode: 0744
+
+  - name: importing data
+    shell: "{{ item }}"
+    with_items: 
+       - scp {{ master1 }}:/*.cluster_backup.tar /backupstore
+       - scp {{ master2 }}:/*.cluster_backup.tar /backupstore
+       - scp {{ master3 }}:/*.cluster_backup.tar /backupstore
+
+#over
