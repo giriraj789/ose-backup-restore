@@ -24,4 +24,4 @@ Cluster Restoration
 $ansible-playbook -i hosts playbooks/restore_cluster.yaml
 
 Author : Giriraj Rajawat
-Email: giriraj.singh.rajawat@citi.com 
+Email: giriraj_789@hotmail.com 
