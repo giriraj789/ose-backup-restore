@@ -50,14 +50,14 @@ y = int(len(host_name))
 ip = []
 count = 0
 while count < y:
-ip.append("master"+str(count+1)+"_ip")
-count = count + 1
+ ip.append("master"+str(count+1)+"_ip")
+ count = count + 1
  
 host = []
 count = 0
 while count < y:
-host.append("master" + str(count+1))
-count = count + 1
+ host.append("master" + str(count+1))
+ count = count + 1
  
 ## Dictionary for merging OSE hostnames and IP addresses lists
  
@@ -74,8 +74,8 @@ print "[OSEV3:children]\nmasters\ncontroller"
 count = 0
 master = "master"
 while count < y:
-print master+str(count+1)
-count = count + 1
+ print master+str(count+1)
+ count = count + 1
 print ""
 print "[OSEV3:vars]\nansible_ssh_user=root"
 for (k, v), (i, j) in zip(host_dict.items(),ip_dict.items()):
@@ -88,9 +88,9 @@ for k,v in host_dict.items():
 print ""
 count = 0
 while (count < y):
-print "[master"+str(count+1)+"]"
-print host_dict.values()[count]
-count = count + 1
+ print "[master"+str(count+1)+"]"
+ print host_dict.values()[count]
+ count = count + 1
 print ""
 print"[controller]"
 controllerhostname = os.uname()[1]
