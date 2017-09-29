@@ -1,4 +1,4 @@
-osebackup_host_inventory_generator.py
+#osebackup_host_inventory_generator.py
 #!/usr/bin/env python
 ### PREREQUISTE
 #### 1. Should be executed from Ansible controller server/system or jump box.
