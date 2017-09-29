@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 # env variables you may want to change
-BACKUPDIR=${BACKUPDIR:-"/testcluster_backup/etcd-data"}
+BACKUPDIR=${BACKUPDIR:-"/ose_cluster_backup/etcd-data"}
  
 hotdir="${BACKUPDIR}/hot/$(date +%Y%m%d%H%M).etcd"
 mkdir -p $hotdir

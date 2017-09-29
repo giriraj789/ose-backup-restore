@@ -12,15 +12,15 @@
 
   - name: Backup directory
     file: 
-      path: /cluster_backup
+      path: /ose_cluster_backup
       state: directory 
       mode: 0744
 
   - name: Backup origin and etcd config directories
     shell: "{{ item }}"
     with_items:
-      - tar czvf /cluster_backup/openshift-$(hostname -f).tgz /etc/origin
-      - tar czvf /cluster_backup/etcd-config-$(hostname -f).tgz /etc/etcd
+      - tar czvf /ose_cluster_backup/openshift-$(hostname -f).tgz /etc/origin
+      - tar czvf /ose_cluster_backup/etcd-config-$(hostname -f).tgz /etc/etcd
 
 #BACKUP OF ETCD DATA DIRECTORY  
 - hosts: master1
